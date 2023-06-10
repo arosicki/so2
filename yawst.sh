@@ -22,14 +22,35 @@
 
 #!/bin/bash
 
-# config
+#################################################################################
+# Config
+#
+# Variables that alter script behavior
+#################################################################################
+# TODO: Move to external .yawstrc file
 FILE_INPUT_DEFAULT=~/
+# TODO: Implement those
+TABLE_SEPARATOR=';'
+OMIT_TABLE_HEADER=false
+# Behavior after successful scrape
+AUTOCLOSE=true
+# Return whole element or just text
+WHOLE_ELEMENTS=false
 
-# constants
+
+#################################################################################
+# Constants
+#
+# Variables that would clutter the code if left in place
+#################################################################################
 URL_REGEX='(https?)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
 SELECTOR_REGEX='^[a-zA-Z0-9\s.#:-]+$'
 
-# strings
+#################################################################################
+# Strings
+#
+# All promts and messages
+#################################################################################
 TITLE="Yet Another Web Scraping Tool"
 MAIN_MENU="Main Menu"
 CHOOSE_OPTION="Choose an option"
@@ -51,7 +72,11 @@ ENTER_HEADER_SELECTOR_QUERY="Enter Header Selector Query"
 ENTER_CELL_SELECTOR_QUERY="Enter Cell Selector Query"
 EXIT="Exit"
 
-# views
+#################################################################################
+# Views
+#
+# Most basic fuctions used to create UI. Should be made generic and reusable.
+#################################################################################
 function main_menu_view() {
     dialog --backtitle "$TITLE" \
     --title "$MAIN_MENU" \
@@ -91,8 +116,13 @@ function error_view() {
     --msgbox "$2" 8 60
 }
 
-#helpers
+#################################################################################
+# Helpers
+#
+# Utility functions
+#################################################################################
 function get_input() {
+    # reads input from temp file overwritten by last view
     cat $TEMP_FILE
 }
 
@@ -102,7 +132,11 @@ function init_tempfile() {
     trap "rm -f $TEMP_FILE" EXIT
 }
 
-# processors
+#################################################################################
+# Processors
+#
+# Functions that process data from user inputs, should contain logic only.
+#################################################################################
 function process_fetch_url() {
     curl -sL $1
 }
@@ -116,11 +150,19 @@ function process_scrape_table() {
     COLUMN_COUNT=$(echo "$1" | pup -n "$2 $3")
     ROWS=$(echo "$1" | pup --charset utf-8 "$2 $4 text{}")
     
+    # Create table from data listed in newlines based amount of headers
     echo "$HEADERS" | awk -v n=$COLUMN_COUNT '{printf "%s%s", $0, (NR%n ? ";" : "\n")}' > $5
     echo "$ROWS" | awk -v n=$COLUMN_COUNT '{printf "%s%s", $0, (NR%n ? ";" : "\n")}' >> $5
 }
 
-# handlers
+
+#################################################################################
+# Handlers
+#
+# Functions that handle and validate user input for single view in specyfic
+# use case. Should return 1 if user wants to go back to previous view
+# and 0 otherwise.
+#################################################################################
 function handle_url_input() {
     enter_url_view "$ENTER_URL" $1
     
@@ -287,9 +329,20 @@ function handle_table_row_query_input() {
     return 0
 }
 
-
-# drivers
+#################################################################################
+# Drivers
+#
+# Functions that define functionality and flow given functionality.
+# All except main driver should use base driver, and only handler functions
+# to define inputs and processor functions to define actions and outputs
+#################################################################################
 function base_driver() {
+    # Base driver
+    # Takes in an array of functions to call in order
+    # Each function should return 0 if driver is to proceed to next step and 1
+    # if driver is to go back to previous step
+    # Driver also stores return values of each function in order to preserve
+    # state of program if users goes back a step
     CONFIG=$1
     declare -a RETURN_VALUES
     CURRENT_STEP=0
@@ -310,7 +363,6 @@ function base_driver() {
         CURRENT_STEP=$(($CURRENT_STEP+1))
     done
 }
-
 
 function scrape_text_driver() {
     CONFIG=(
