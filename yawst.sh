@@ -22,14 +22,13 @@
 
 #!/bin/bash
 
-
 # config
 FILE_INPUT_DEFAULT=~/
 
 # constants
 URL_REGEX='(https?)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
 SELECTOR_REGEX='^[a-zA-Z0-9\s.#:-]+$'
-+6
+
 # strings
 TITLE="Yet Another Web Scraping Tool"
 MAIN_MENU="Main Menu"
@@ -109,11 +108,16 @@ function process_fetch_url() {
 }
 
 function process_scrape_text() {
-    echo "$1" | pup "$2 text{}" > $3
+    echo "$1" | pup --charset utf-8 "$2 text{}" > $3
 }
 
-function handle_scrape_table() {
-    echo "handle_scrape_table"
+function process_scrape_table() {
+    HEADERS=$(echo "$1" | pup --charset utf-8 "$2 $3 text{}")
+    COLUMN_COUNT=$(echo "$1" | pup -n "$2 $3")
+    ROWS=$(echo "$1" | pup --charset utf-8 "$2 $4 text{}")
+    
+    echo "$HEADERS" | awk -v n=$COLUMN_COUNT '{printf "%s%s", $0, (NR%n ? ";" : "\n")}' > $5
+    echo "$ROWS" | awk -v n=$COLUMN_COUNT '{printf "%s%s", $0, (NR%n ? ";" : "\n")}' >> $5
 }
 
 # handlers
@@ -211,6 +215,79 @@ function handle_file_input() {
     return 0
 }
 
+function handle_table_query_input() {
+    enter_selector_query_view "$ENTER_TABLE_SELECTOR_QUERY" $1
+    
+    if [ $? -eq 1 ]; then
+        return 1
+    fi
+    
+    TABLE_SELECTOR_QUERY=$(get_input)
+    
+    while [[ ! $TABLE_SELECTOR_QUERY =~ $SELECTOR_REGEX ]]; do
+        error_view "$ENTER_SELECTOR_QUERY_ERROR" "$ENTER_SELECTOR_QUERY_ERROR_MSG"
+        enter_selector_query_view "$ENTER_TABLE_SELECTOR_QUERY" $TABLE_SELECTOR_QUERY
+        
+        if [ $? -eq 1 ]; then
+            return 1
+        fi
+        
+        TABLE_SELECTOR_QUERY=$(get_input)
+    done
+    
+    RETURN_VALUE=$TABLE_SELECTOR_QUERY
+    return 0
+}
+
+function handle_table_header_query_input() {
+    enter_selector_query_view "$ENTER_HEADER_SELECTOR_QUERY" $1
+    
+    if [ $? -eq 1 ]; then
+        return 1
+    fi
+    
+    HEADER_SELECTOR_QUERY=$(get_input)
+    
+    while [[ ! $HEADER_SELECTOR_QUERY =~ $SELECTOR_REGEX ]]; do
+        error_view "$ENTER_SELECTOR_QUERY_ERROR" "$ENTER_SELECTOR_QUERY_ERROR_MSG"
+        enter_selector_query_view "$ENTER_HEADER_SELECTOR_QUERY" $HEADER_SELECTOR_QUERY
+        
+        if [ $? -eq 1 ]; then
+            return 1
+        fi
+        
+        HEADER_SELECTOR_QUERY=$(get_input)
+    done
+    
+    RETURN_VALUE=$HEADER_SELECTOR_QUERY
+    return 0
+}
+
+function handle_table_row_query_input() {
+    enter_selector_query_view "$ENTER_CELL_SELECTOR_QUERY" $1
+    
+    if [ $? -eq 1 ]; then
+        return 1
+    fi
+    
+    CELL_SELECTOR_QUERY=$(get_input)
+    
+    while [[ ! $CELL_SELECTOR_QUERY =~ $SELECTOR_REGEX ]]; do
+        error_view "$ENTER_SELECTOR_QUERY_ERROR" "$ENTER_SELECTOR_QUERY_ERROR_MSG"
+        enter_selector_query_view "$ENTER_CELL_SELECTOR_QUERY" $CELL_SELECTOR_QUERY
+        
+        if [ $? -eq 1 ]; then
+            return 1
+        fi
+        
+        CELL_SELECTOR_QUERY=$(get_input)
+    done
+    
+    RETURN_VALUE=$CELL_SELECTOR_QUERY
+    return 0
+}
+
+
 # drivers
 function base_driver() {
     CONFIG=$1
@@ -248,7 +325,17 @@ function scrape_text_driver() {
 }
 
 function scrape_table_driver() {
-    echo "scrape_text_driver"
+    CONFIG=(
+        handle_url_input
+        handle_table_query_input
+        handle_table_header_query_input
+        handle_table_row_query_input
+        handle_file_input
+    )
+    
+    base_driver $CONFIG
+    
+    process_scrape_table "$HTML" "$TABLE_SELECTOR_QUERY" "$HEADER_SELECTOR_QUERY" "$CELL_SELECTOR_QUERY" "$OUTPUT_FILE"
 }
 
 function main_driver() {
