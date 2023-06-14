@@ -1,3 +1,5 @@
+#!/bin/bash
+
 #################################################################################
 # Copyright (c) 2023 Adrian Rosicki
 #
@@ -20,31 +22,51 @@
 # SOFTWARE.
 #################################################################################
 
-#!/bin/bash
+#################################################################################
+# Yet Another Web Scraping Tool
+#
+# Web scraping tool with command line UI.
+# Provides two basic functionalities:
+#
+# 1. Scraping text from HTML document - you can use selector query to specify which text to scrape
+# 2. Scraping table (or other 2 dimensional data format) from HTML document - 
+#    you can use selector query to specify which table to scrape and which selectors are headers and cells
+#
+# Config can be provided in .yawstrc file in home directory.
+# If no config is provided, default config is generated and used.
+#
+# Config options:
+#
+# FILE_INPUT_DEFAULT=/home/[current_user]/ - default directory for file input
+# TABLE_SEPARATOR=';' - separator used in table output
+# OMIT_TABLE_HEADER=false - if true, table header will not be included in table output
+# AUTOCLOSE=true - if true, program will close after successful scrape
+# WHOLE_ELEMENTS=false - if true, whole HTML elements will be returned instead of just text
+#
+# Usage:  yawsct.sh [-v] [-h]"# Options:
+#
+# -v - print version
+# -h - print help
+#################################################################################
 
 #################################################################################
 # Config
-#
-# Variables that alter script behavior
 #################################################################################
-# TODO: Move to external .yawstrc file
-FILE_INPUT_DEFAULT=~/
-# TODO: Implement those
-TABLE_SEPARATOR=';'
-OMIT_TABLE_HEADER=false
-# Behavior after successful scrape
-AUTOCLOSE=true
-# Return whole element or just text
-WHOLE_ELEMENTS=false
-
+VERSION="0.1.0"
+AUTHOR="Adrian Rosicki"
+# Defaults for config file
+CONFIG_FILE=~/.yawstrc
+CONFIG_FILE_INPUT_DEFAULT=~/
+CONFIG_FILE_TABLE_SEPARATOR=';'
+CONFIG_FILE_OMIT_TABLE_HEADERS=false
+CONFIG_FILE_AUTOCLOSE=true
+CONFIG_FILE_WHOLE_ELEMENTS=false
 
 #################################################################################
 # Constants
-#
-# Variables that would clutter the code if left in place
 #################################################################################
 URL_REGEX='(https?)://[-[:alnum:]\+&@#/%?=~_|!:,.;]*[-[:alnum:]\+&@#/%=~_|]'
-SELECTOR_REGEX='^[a-zA-Z0-9\s.#:-]+$'
+SELECTOR_REGEX='[a-zA-Z0-9\s.#:-]+'
 
 #################################################################################
 # Strings
@@ -116,6 +138,36 @@ function error_view() {
     --msgbox "$2" 8 60
 }
 
+function version_view() {
+    echo "$TITLE $VERSION"
+    echo "Author: $AUTHOR"
+}
+
+function help_view() {
+    echo "$TITLE $VERSION"
+    echo "Web scraping tool with command line UI."
+    echo "Provides two basic functionalities:"
+    echo
+    echo "1. Scraping text from HTML document - you can use selector query to specify which text to scrape"
+    echo "2. Scraping table (or other 2 dimensional data format) from HTML document - you can use selector query to specify which table to scrape and which selectors are headers and cells"
+    echo
+    echo "Config can be provided in .yawstrc file in home directory."
+    echo "If no config is provided, default config is generated and used."
+    echo "Config options:"
+    echo
+    echo "FILE_INPUT_DEFAULT=/home/[current_user]/ - default directory for file input"
+    echo "TABLE_SEPARATOR=';' - separator used in table output"
+    echo "OMIT_TABLE_HEADER=false - if true, table header will not be included in table output"
+    echo "AUTOCLOSE=true - if true, program will close after successful scrape"
+    echo "WHOLE_ELEMENTS=false - if true, whole HTML elements will be returned instead of just text"
+    echo
+    echo "Usage: $0 [-v] [-h]"
+    echo
+    echo "Options:"
+    echo "-v - print version"
+    echo "-h - print help"
+}
+
 #################################################################################
 # Helpers
 #
@@ -142,17 +194,43 @@ function process_fetch_url() {
 }
 
 function process_scrape_text() {
-    echo "$1" | pup --charset utf-8 "$2 text{}" > $3
+    if [ $WHOLE_ELEMENTS = true ]; then
+        echo "$1" | pup --charset utf-8 "$2" > $3
+    else
+        echo "$1" | pup --charset utf-8 "$2 text{}" > $3
+    fi
 }
 
 function process_scrape_table() {
-    HEADERS=$(echo "$1" | pup --charset utf-8 "$2 $3 text{}")
-    COLUMN_COUNT=$(echo "$1" | pup -n "$2 $3")
-    ROWS=$(echo "$1" | pup --charset utf-8 "$2 $4 text{}")
+    if [ $WHOLE_ELEMENTS = true ]; then
+        HEADERS=$(echo "$1" | pup --charset utf-8 "$2 $3")
+        ROWS=$(echo "$1" | pup --charset utf-8 "$2 $4")
+    else
+        HEADERS=$(echo "$1" | pup --charset utf-8 "$2 $3 text{}")
+        ROWS=$(echo "$1" | pup --charset utf-8 "$2 $4 text{}")
+    fi
+    COLUMN_COUNT=$(echo "$1" | pup -n "$2 $3")  
     
     # Create table from data listed in newlines based amount of headers
-    echo "$HEADERS" | awk -v n=$COLUMN_COUNT '{printf "%s%s", $0, (NR%n ? ";" : "\n")}' > $5
-    echo "$ROWS" | awk -v n=$COLUMN_COUNT '{printf "%s%s", $0, (NR%n ? ";" : "\n")}' >> $5
+    if [ $OMIT_TABLE_HEADERS = false ]; then
+        echo "$HEADERS" | awk -v n=$COLUMN_COUNT "{printf \"%s%s\", \$0, (NR%n ? \"$TABLE_SEPARATOR\" : \"\n\")}" > $5
+        echo "$ROWS" | awk -v n=$COLUMN_COUNT "{printf \"%s%s\", \$0, (NR%n ? \"$TABLE_SEPARATOR\" : \"\n\")}" > $5
+    else
+        echo "$ROWS" | awk -v n=$COLUMN_COUNT "{printf \"%s%s\", \$0, (NR%n ? \"$TABLE_SEPARATOR\" : \"\n\")}" > $5
+    fi
+}
+
+function process_config() {
+    if [[ ! -f $CONFIG_FILE ]]; then
+        touch $CONFIG_FILE > /dev/null
+        echo "FILE_INPUT_DEFAULT=$CONFIG_FILE_INPUT_DEFAULT" > $CONFIG_FILE
+        echo "TABLE_SEPARATOR=\"$CONFIG_FILE_TABLE_SEPARATOR\"" >> $CONFIG_FILE
+        echo "OMIT_TABLE_HEADERS=$CONFIG_FILE_OMIT_TABLE_HEADERS" >> $CONFIG_FILE
+        echo "AUTOCLOSE=$CONFIG_FILE_AUTOCLOSE" >> $CONFIG_FILE
+        echo "WHOLE_ELEMENTS=$CONFIG_FILE_WHOLE_ELEMENTS" >> $CONFIG_FILE
+    fi
+
+    . $CONFIG_FILE
 }
 
 
@@ -164,7 +242,7 @@ function process_scrape_table() {
 # and 0 otherwise.
 #################################################################################
 function handle_url_input() {
-    enter_url_view "$ENTER_URL" $1
+    enter_url_view "$ENTER_URL" "$1"
     
     if [ $? -eq 1 ]; then
         return 1
@@ -197,12 +275,12 @@ function handle_url_input() {
         fi
     done
     
-    RETURN_VALUE=$URL
+    RETURN_VALUE="$URL"
     return 0
 }
 
 function handle_selector_query_input() {
-    enter_selector_query_view "$ENTER_SELECTOR_QUERY" $1
+    enter_selector_query_view "$ENTER_SELECTOR_QUERY" "$1"
     
     if [ $? -eq 1 ]; then
         return 1
@@ -221,12 +299,12 @@ function handle_selector_query_input() {
         SELECTOR_QUERY=$(get_input)
     done
     
-    RETURN_VALUE=$SELECTOR_QUERY
+    RETURN_VALUE="$SELECTOR_QUERY"
     return 0
 }
 
 function handle_file_input() {
-    select_output_file_view "$SELECT_OUTPUT_FILE" $1
+    select_output_file_view "$SELECT_OUTPUT_FILE" "$1"
     
     if [ $? -eq 1 ]; then
         return 1
@@ -258,7 +336,7 @@ function handle_file_input() {
 }
 
 function handle_table_query_input() {
-    enter_selector_query_view "$ENTER_TABLE_SELECTOR_QUERY" $1
+    enter_selector_query_view "$ENTER_TABLE_SELECTOR_QUERY" "$1"
     
     if [ $? -eq 1 ]; then
         return 1
@@ -277,12 +355,12 @@ function handle_table_query_input() {
         TABLE_SELECTOR_QUERY=$(get_input)
     done
     
-    RETURN_VALUE=$TABLE_SELECTOR_QUERY
+    RETURN_VALUE="$TABLE_SELECTOR_QUERY"
     return 0
 }
 
 function handle_table_header_query_input() {
-    enter_selector_query_view "$ENTER_HEADER_SELECTOR_QUERY" $1
+    enter_selector_query_view "$ENTER_HEADER_SELECTOR_QUERY" "$1"
     
     if [ $? -eq 1 ]; then
         return 1
@@ -301,12 +379,12 @@ function handle_table_header_query_input() {
         HEADER_SELECTOR_QUERY=$(get_input)
     done
     
-    RETURN_VALUE=$HEADER_SELECTOR_QUERY
+    RETURN_VALUE="$HEADER_SELECTOR_QUERY"
     return 0
 }
 
 function handle_table_row_query_input() {
-    enter_selector_query_view "$ENTER_CELL_SELECTOR_QUERY" $1
+    enter_selector_query_view "$ENTER_CELL_SELECTOR_QUERY" "$1"
     
     if [ $? -eq 1 ]; then
         return 1
@@ -325,7 +403,7 @@ function handle_table_row_query_input() {
         CELL_SELECTOR_QUERY=$(get_input)
     done
     
-    RETURN_VALUE=$CELL_SELECTOR_QUERY
+    RETURN_VALUE="$CELL_SELECTOR_QUERY"
     return 0
 }
 
@@ -349,7 +427,7 @@ function base_driver() {
     TOTAL_STEPS=${#CONFIG[@]}
     
     while [[ $CURRENT_STEP -lt $TOTAL_STEPS ]]; do
-        ${CONFIG[$CURRENT_STEP]} ${RETURN_VALUES[$CURRENT_STEP]}
+        ${CONFIG[$CURRENT_STEP]} "${RETURN_VALUES[$CURRENT_STEP]}"
         
         if [ $? -eq 1 ]; then
             if [ $CURRENT_STEP -eq 0 ]; then
@@ -359,7 +437,7 @@ function base_driver() {
             continue
         fi
         
-        RETURN_VALUES[$CURRENT_STEP]=$RETURN_VALUE
+        RETURN_VALUES[$CURRENT_STEP]="$RETURN_VALUE"
         CURRENT_STEP=$(($CURRENT_STEP+1))
     done
 }
@@ -408,7 +486,31 @@ function main_driver() {
                 exit 1
             ;;
         esac
+
+        if [ $AUTOCLOSE = true ]; then
+            clear
+            exit 0
+        fi
     done
 }
 
+while getopts vh OPT; do
+    case $OPT in
+        v)
+            version_view
+            exit 0
+        ;;
+        h)
+            help_view
+            exit 0
+        ;;
+        *)
+            echo "Invalid option: -$OPT:"
+            echo "Usage: $0 [-v] [-h]"
+            exit 1
+        ;;
+    esac
+done
+
+process_config
 main_driver
