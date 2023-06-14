@@ -1,0 +1,50 @@
+.TH yawst.sh 1
+.SH NAME
+yawst.sh \- Web scraping tool with command line UI. 
+.SH SYNOPSIS
+.B yawst.sh
+[h]
+[b]
+.SH DESCRIPTION
+This is a simple web scraping tool with command line UI. Program provides two basic functionalities: 
+.IP [1]
+Scraping data from given website and saving it to file.
+.IP [2]
+Scraping 2-D data (e.g. table) from given website and printing it to standard output.
+.SH OPTIONS
+.TP
+.B \-h
+Prints short help message.
+.TP
+.B \-v
+Prints version and author information.
+.SH CONFIGURATION
+Program is configurable via .yawstrc file located in current users home directory, which is automatically created if it does not exist.
+.TP
+.B FILE_INPUT_DEFAULT
+Defines default directory for all flie inputs.
+.TP
+.B TABLE_SEPARATOR
+Separator for comumns table data scraping.
+.TP
+.B OMIT_TABLE_HEADERS
+Defines if table header should omited while scraping table data.
+.TP
+.B AUTOCLOSE
+Defines if program should automatically close performing a scrape.
+.TP
+.B WHOLE_ELEMENTS
+Defines if whole elements should be scraped instead only text contained within.
+.SH AUTHOR
+Written by Adrian Rosicki.
+.SH LICENSE
+.B Copyright © 2023 Adrian Rosicki.
+License MIT: <https://mit-license.org/>
+This is free software: you are free to change and redistribute it.  There is NO WARRANTY, to the extent permitted by law.
+.SH SEE ALSO
+.TP
+.BR curl
+<https://curl.haxx.se/>
+.TP
+.BR pup
+<https://github.com/ericchiang/pup>
