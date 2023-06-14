@@ -1,0 +1,51 @@
+.TH yawst.sh 1
+.SH NAZWA
+yawst.sh \- Narzędzie do pobierania danych ze struktury HTML z interfejsem w terminalu. 
+.SH SKŁADNIA
+.B yawst.sh
+[h]
+[b]
+.SH OPIS
+Proste narzędzie do pobierania danych ze struktury HTML z interfejsem stworzonym w terminalu. Program zawiera dwie podstawowe funkcjonalości: 
+.IP [1]
+Pobieranie danych z danej strony internetowej i zapisywanie ich do pliku.
+.IP [2]
+Scraping 2-D data (e.g. table) from given website and printing it to standard output.
+Pobieranie danych dwuwymiaroych (np. z tabel) z danej strony internetowej i zapisywaniu ich do pliku.
+.SH OPCJE
+.TP
+.B \-h
+Wyświetla krótką pomoc.
+.TP
+.B \-v
+Wyświetla wersję programu oraz informacje o autorze.
+.SH KONFIGURACJA
+Program jest konfigurowalny za pomocą pliku .yawstrc znajdującego się w katalogu domowym użytkownika, jest on automatycznie tworzony jeżeli nie istnieje.
+.TP
+.B FILE_INPUT_DEFAULT
+Definiuje domyślny katalog dla wszystkich plików wejściowych.
+.TP
+.B TABLE_SEPARATOR
+Separator dla kolumn podczas wybierania danych z tabeli.
+.TP
+.B OMIT_TABLE_HEADERS
+Określa czy nagłówki tabeli powinny zostać pominięte w pliku wyjściowym.
+.TP
+.B AUTOCLOSE
+Określa czy program powinien automatycznie zamknąć się po wykonaniu zakończeniu operacji.
+.TP
+.B WHOLE_ELEMENTS
+Określa czy w pliku wyjściowym powinny znajdować się całe elementy HTML zamiast wyłącznie ich tekstowej zawartości.
+.SH AUTOR
+Adrian Rosicki
+.SH LICENCJA
+.B Copyright © 2023 Adrian Rosicki.
+Licencja MIT: <https://mit-license.org/>
+Oprogramowanie jest całkowicie darmowe: możesz je dowolnie modyfikować i rozpowszechniać. NIE MA ŻADNEJ GWARANCJI, w zakresie dozwolonym przez prawo.
+.SH ZOBACZ RÓWNIEŻ
+.TP
+.BR curl
+<https://curl.haxx.se/>
+.TP
+.BR pup
+<https://github.com/ericchiang/pup>
